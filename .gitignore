@@ -1,0 +1,22 @@
+# deps / build
+node_modules/
+.next/
+out/
+build/
+
+# env — never commit secrets
+.env
+.env.local
+.env.production
+
+# logs & os
+*.log
+npm-debug.log*
+.DS_Store
+
+# vercel
+.vercel/
+
+# typescript
+next-env.d.ts
+*.tsbuildinfo
