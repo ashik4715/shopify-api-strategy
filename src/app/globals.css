@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Sora", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-paper: #fafaf7;
+  --color-surface: #ffffff;
+  --color-ink: #0f1d19;
+  --color-ink-soft: #4a5a54;
+  --color-moss: #0b6e4f;
+  --color-moss-deep: #08543d;
+  --color-moss-tint: #eef5f1;
+  --color-amber: #b97e12;
+  --color-amber-tint: #fbf3e2;
+  --color-line: #e7e9e3;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise {
+  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}

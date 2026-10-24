@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -34,3 +35,27 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+=======
+# deps / build
+node_modules/
+.next/
+out/
+build/
+
+# env — never commit secrets
+.env
+.env.local
+.env.production
+
+# logs & os
+*.log
+npm-debug.log*
+.DS_Store
+
+# vercel
+.vercel/
+
+# typescript
+next-env.d.ts
+*.tsbuildinfo
+>>>>>>> 4293bd3 (build ok nextjs app run ready)
