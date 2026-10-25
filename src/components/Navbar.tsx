@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 const links = [
+  { href: "/proposal-studio", label: "Proposal Studio" },
   { href: "/proposals", label: "Downloads" },
   { href: "#invest", label: "The Numbers" },
   { href: "#compare", label: "WordPress vs Custom" },
