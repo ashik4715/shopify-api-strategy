@@ -68,7 +68,7 @@ export default function Recurring() {
               ))}
             </ul>
             <p className="mt-4 rounded-xl bg-moss-tint px-4 py-3 text-sm text-moss-deep">
-              ≈ ৳57,120 / yr · Option B's year-1 total (৳65,000 build + maintenance) is about ৳41,000
+              ≈ ৳57,120 / yr · Option B&apos;s year-1 total (৳65,000 build + maintenance) is about ৳41,000
               cheaper than Option A — and nothing to patch.
             </p>
           </div>

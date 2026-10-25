@@ -11,7 +11,7 @@ export default function Hero() {
 
           <h1 className="rise mt-6 font-display text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">
             One codebase you control.{" "}
-            <span className="text-moss">Shopify's brain, your front end.</span>
+            <span className="text-moss">Shopify&apos;s brain, your front end.</span>
           </h1>
 
           <p className="rise mt-6 max-w-2xl text-lg leading-relaxed text-ink-soft">

@@ -20,9 +20,9 @@
 
 A Next.js (App Router) proposal site for a Shopify storefront business:
 
-- **Home** — Hero, assumptions strip, two-option investment summary (৳58,000 / ৳65,000), WordPress-vs-headless comparison, plugin stack, **separate maintenance tables**, timelines with revision rounds, recommendation, quote form (saved to PostgreSQL).
+- **Home** — Hero, assumptions strip, two-option investment summary (৳58,000 / ৳65,000), WordPress-vs-headless comparison, plugin stack, **separate maintenance tables**, timelines with revision rounds, recommendation, quote form (appended to a local JSON file).
 - **/proposals** — the Proposal Library: two markdown proposals with **Download .md** (blob) and **Download .pdf** (generated in-browser with jsPDF from the same markdown, styled per the client template: green `#108a00` h1, navy `#002347` h2, `#f4f6f8` table headers, page-break divs honored) plus a rendered preview.
-- **API** — `POST /api/inquiry` (validates + inserts into Postgres), `GET /api/health`.
+- **API** — `POST /api/inquiry` (validates + appends to the JSON store), `GET /api/health`.
 
 ---
 
@@ -33,7 +33,7 @@ A Next.js (App Router) proposal site for a Shopify storefront business:
 | Framework | Next.js 16 (App Router, Turbopack, TypeScript) |
 | Styling | Tailwind CSS v4 (`@theme` tokens in `globals.css`) |
 | Fonts | `next/font/google` — Sora (display) + Inter (body) |
-| Database | PostgreSQL via Drizzle ORM (`node-postgres` pool) |
+| Storage | JSON file — write-only append log (`data/inquiries.json`), no DB server |
 | PDF | `jspdf` (dynamic import, client-side only) |
 | Icons | inline SVG (no icon library) |
 
@@ -69,11 +69,9 @@ A Next.js (App Router) proposal site for a Shopify storefront business:
 │   │   ├── ProposalLibrary.tsx         # ★ MD download + jsPDF renderer + preview
 │   │   ├── SectionHeading.tsx
 │   │   └── Footer.tsx
-│   └── db/
-│       ├── index.ts                    # pg Pool from process.env.DATABASE_URL
-│       └── schema.ts                   # inquiries table
-├── drizzle.config.json                 # drizzle-kit push config
-├── .env                                # DATABASE_URL (never commit)
+│   └── lib/
+│       └── inquiries-json.ts             # JSON file store (read + append, atomic write)
+├── data/inquiries.json                   # write-only inquiry store (gitignored)
 ├── next.config.ts
 ├── package.json
 ├── tsconfig.json
@@ -88,42 +86,36 @@ A Next.js (App Router) proposal site for a Shopify storefront business:
 # 1. install
 npm install
 
-# 2. env
-cp .env.example .env
-# edit .env:
-#   DATABASE_URL=postgresql://USER:PASS@HOST:5432/DBNAME
-
-# 3. create the table
-npx drizzle-kit push
-
-# 4. run
+# 2. run — no database, no env vars required
 npm run dev        # http://localhost:3000
 
-# 5. verify
-npm exec tsc -- --noEmit
+# 3. verify
+npm run typecheck
+npm run lint
 npm run build
 ```
 
-Local Postgres options: `docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=app_db postgres:16`, or any managed Postgres (Neon, Supabase, Vercel Postgres).
+### Inquiry store (`src/lib/inquiries-json.ts`)
 
-### Database schema (`src/db/schema.ts`)
+Inquiries are appended to `data/inquiries.json` — a write-only JSON file that is
+gitignored and created on the first submission. No database server, no migrations.
 
 ```ts
-import { pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
-
-export const inquiries = pgTable("inquiries", {
-  id: varchar("id", { length: 36 }).primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  name: varchar("name", { length: 120 }).notNull(),
-  email: varchar("email", { length: 200 }).notNull(),
-  phone: varchar("phone", { length: 40 }),
-  option: varchar("option", { length: 20 }).notNull().default("undecided"),
-  message: text("message"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+export type Inquiry = {
+  id: string;        // crypto.randomUUID()
+  name: string;
+  email: string;
+  phone: string | null;
+  option: string;    // "wordpress" | "custom" | "undecided"
+  message: string | null;
+  createdAt: string; // ISO timestamp
+};
 ```
 
-After changing the schema: `npx drizzle-kit push`.
+- Writes are serialized and atomic (temp file + rename), so concurrent submissions cannot corrupt or drop rows.
+- `GET /api/health` returns `{"ok":true,"count":N}` — the number of stored inquiries.
+- Set `INQUIRIES_FILE=/absolute/path/inquiries.json` to move the store (e.g. a mounted volume).
+- The file is the source of truth for inquiries: back it up, and never commit it.
 
 ---
 
@@ -132,6 +124,7 @@ After changing the schema: `npx drizzle-kit push`.
 - **`.md` download** — `src/app/proposals/page.tsx` (server) reads `proposals/*.md` with `fs/promises` at build time and passes the text to `ProposalLibrary`. The button creates a `Blob` → `URL.createObjectURL` → `<a download>`. No API round-trip.
 - **`.pdf` download** — `buildPdf()` in `ProposalLibrary.tsx` dynamically imports `jspdf` and renders the same markdown: strips YAML front matter and `<style>`, converts `<div page-break>` to `addPage()`, draws headings in brand colors, and renders tables as real grids (filled `#f4f6f8` header, `#e0e0e0` borders) with content-weighted column widths.
 - **Edit content = edit the `.md` files.** The preview and PDF can never drift from the markdown.
+- **Storage-independent** — the download path never touches the inquiry store, so `.md` and `.pdf` exports are byte-for-byte identical to the PostgreSQL version of this site.
 
 ---
 
@@ -146,32 +139,26 @@ After changing the schema: `npx drizzle-kit push`.
    git remote add origin https://github.com/YOUR_USER/shopcraft.git
    git push -u origin main
    ```
-   Before pushing: create `.gitignore` containing `.env`, `.next/`, `node_modules/` and an `.env.example` with `DATABASE_URL=` placeholder. **Never commit `.env`.**
+   Before pushing: create `.gitignore` containing `.env`, `.next/`, `node_modules/` and `data/inquiries.json`. **Never commit `.env` or the inquiry file.**
 
-2. **Create a Postgres database** — Vercel Dashboard → *Storage* → *Create Database* (Vercel Postgres / Neon), or use an external Neon/Supabase URL.
-
-3. **Import the repo** — vercel.com → *Add New Project* → import the repo.
+2. **Import the repo** — vercel.com → *Add New Project* → import the repo.
    - Framework preset: **Next.js** (auto-detected, no build overrides needed)
    - Build command: `next build` (default) · Output: `.next` (default)
 
-4. **Environment variables** (Project → Settings → Environment Variables):
+3. **Environment variables** (Project → Settings → Environment Variables):
    ```
-   DATABASE_URL = <your production postgres URL>   # Production + Preview + Development
+   INQUIRIES_FILE = /tmp/inquiries.json   # optional; only meaningful on a writable volume
    ```
    Add `SHOPIFY_*` vars later if you wire real Shopify data — server-side only unless prefixed `NEXT_PUBLIC_`.
 
-5. **Create the table in production:**
-   ```bash
-   DATABASE_URL="<production url>" npx drizzle-kit push
-   ```
-   (or run it locally with the production URL in `.env`, then remove it).
-
-6. **Deploy** — *Deploy*. First build takes ~1–2 min. Verify:
-   - `/api/health` → `{"ok":true}`
+4. **Deploy** — *Deploy*. First build takes ~1–2 min. Verify:
+   - `/api/health` → `{"ok":true,"count":0}`
    - `/proposals` → both cards with Download .md / .pdf
-   - submit the quote form → row appears in the `inquiries` table
+   - submit the quote form → the inquiry is appended to the store file
 
-7. **Every push to `main` redeploys**; PRs get preview URLs.
+   > **Serverless caveat:** Vercel functions have an ephemeral, read-only bundle filesystem, so the JSON store does not persist there. Deploy to a host with a persistent writable volume (VPS, Docker, Fly.io with a volume) or keep a hosted database for production; the JSON store is intended for local development and single-server deployments.
+
+5. **Every push to `main` redeploys**; PRs get preview URLs.
 
 ---
 
@@ -185,7 +172,7 @@ After changing the schema: `npx drizzle-kit push`.
 | Proposal PDF colors | `<style>` block inside each `.md` + constants `GREEN/NAVY/BORDER/THBG` in `ProposalLibrary.tsx` |
 | Payment milestones (30/40/30) | `InvestmentSummary.tsx` + both `.md` files |
 | Section order on home | `src/app/page.tsx` |
-| Form destination | `src/app/api/inquiry/route.ts` (currently DB insert; swap for email/Slack webhook) |
+| Form destination | `src/app/api/inquiry/route.ts` (currently JSON file append; swap for email/Slack webhook) |
 | Site metadata | `src/app/layout.tsx` |
 
 ---

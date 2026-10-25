@@ -20,3 +20,13 @@ npm-debug.log*
 # typescript
 next-env.d.ts
 *.tsbuildinfo
+
+# inquiry store — write-only append log, never commit customer data
+data/inquiries.json
+data/*.tmp
+
+# local agent tooling / generated graphs
+.claude/
+.opencode/
+graphify-out/
+skills-lock.json
