@@ -87,21 +87,249 @@ export default function ProposalStudio() {
   async function downloadPdf() {
     try {
       const { jsPDF } = await import("jspdf");
+      type RGB = [number, number, number];
+      const TEAL: RGB = [17, 62, 63];
+      const GOLD: RGB = [229, 169, 59];
+      const CREAM: RGB = [247, 245, 240];
+      const CHAR: RGB = [44, 62, 80];
+      const MUTED: RGB = [102, 102, 102];
+      const WHITE: RGB = [255, 255, 255];
+      const LINE: RGB = [222, 226, 226];
       const doc = new jsPDF({ unit: "pt", format: "a4" });
-      const M = 54, W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), right = W - M; let y = M;
-      const write = (text: string, size = 11, bold = false) => {
-        doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(size); doc.setTextColor(17, 62, 63);
-        const wrapped = doc.splitTextToSize(text, right - M) as string[]; const lead = size * 1.5;
-        wrapped.forEach((l) => { if (y + lead > H - M) { doc.addPage(); y = M; } doc.text(l, M, y); y += lead; });
+      const W = doc.internal.pageSize.getWidth();
+      const H = doc.internal.pageSize.getHeight();
+      const M = 42;
+      const CW = W - M * 2;
+      let y = 0;
+      const clean = (s: string) => s.replace(/[—–]/g, "-").replace(/৳/g, "BDT ");
+      const moneyPdf = (n: number) => (f.currency === "USD" ? `$${n.toLocaleString("en-US")}` : `${f.currency} ${n.toLocaleString("en-US")}`);
+      const fill = (c: RGB) => doc.setFillColor(c[0], c[1], c[2]);
+      const stroke = (c: RGB) => doc.setDrawColor(c[0], c[1], c[2]);
+      const txtColor = (c: RGB) => doc.setTextColor(c[0], c[1], c[2]);
+      const newPage = () => { doc.addPage(); y = 42; };
+      const ensure = (need: number) => { if (y + need > H - 42) newPage(); };
+      const para = (text: string, size = 10.5, bold = false, color: RGB = CHAR, x: number = M, width: number = CW, leadMul = 1.45) => {
+        doc.setFont("helvetica", bold ? "bold" : "normal"); doc.setFontSize(size); txtColor(color);
+        const lead = size * leadMul;
+        (doc.splitTextToSize(clean(text), width) as string[]).forEach((l) => { ensure(lead); doc.text(l, x, y); y += lead; });
       };
-      write(f.projectTitle || "Proposal", 20, true); y += 6;
-      write(`Prepared for: ${f.clientCompany}  |  Prepared by: ${f.freelancer}  |  ${f.freelancerPhone}`, 11); y += 6;
-      write(`Platform: ${f.platform}  |  Timeline: ${f.timeline}  |  Fee: ${money(price)}`, 11); y += 10;
-      write("Project Overview", 13, true); write(f.summary, 11); y += 4;
-      lines(f.scope).forEach((x) => write(`- ${x}`, 11));
-      y += 6; write("Deliverables", 13, true); lines(f.deliverables).forEach((x) => write(`- ${x}`, 11));
-      y += 6; write("Timeline", 13, true); lines(f.milestones).forEach((x) => write(`- ${x}`, 11));
-      y += 6; write("Payment", 13, true); lines(f.paymentLines).forEach((x) => write(`- ${x}`, 11));
+      const gap = (n: number) => { y += n; };
+      const section = (num: string, title: string) => {
+        ensure(56);
+        doc.setFont("helvetica", "bold"); doc.setFontSize(11); txtColor(TEAL);
+        doc.text(`${num}  -  ${title.toUpperCase()}`, M, y); y += 8;
+        fill(GOLD); doc.rect(M, y, 44, 2.5, "F"); y += 16;
+      };
+      const bullet = (text: string) => {
+        const lead = 15;
+        doc.setFont("helvetica", "normal"); doc.setFontSize(10.5); txtColor(CHAR);
+        const wrapped = doc.splitTextToSize(clean(text), CW - 18) as string[];
+        wrapped.forEach((l, i) => {
+          ensure(lead);
+          if (i === 0) { fill(GOLD); doc.circle(M + 4, y - 3.5, 3, "F"); }
+          doc.text(l, M + 18, y); y += lead;
+        });
+        y += 2;
+      };
+      const drawTable = (headers: string[], rows: string[][], widths: number[]) => {
+        const headerH = 26;
+        const drawHeader = () => {
+          fill(CREAM); doc.rect(M, y, CW, headerH, "F");
+          stroke(LINE); doc.setLineWidth(0.5); doc.rect(M, y, CW, headerH);
+          doc.setFont("helvetica", "bold"); doc.setFontSize(9); txtColor(TEAL);
+          let x = M;
+          headers.forEach((h, ci) => { doc.text(clean(h), x + 7, y + 17); x += widths[ci]; });
+          y += headerH;
+        };
+        ensure(headerH + 20); drawHeader();
+        rows.forEach((row) => {
+          doc.setFont("helvetica", "normal"); doc.setFontSize(9); txtColor(CHAR);
+          const cellLines = row.map((c, ci) => doc.splitTextToSize(clean(c), widths[ci] - 14) as string[]);
+          const h = Math.max(...cellLines.map((l) => l.length)) * 12 + 12;
+          if (y + h > H - 42) { newPage(); drawHeader(); }
+          stroke(LINE); doc.setLineWidth(0.5); doc.rect(M, y, CW, h);
+          let x = M;
+          cellLines.forEach((ls, ci) => {
+            doc.setFont("helvetica", ci === 0 ? "bold" : "normal"); doc.setFontSize(9); txtColor(CHAR);
+            ls.forEach((l, li) => doc.text(l, x + 7, y + 16 + li * 12));
+            x += widths[ci];
+          });
+          y += h;
+        });
+        y += 10;
+      };
+      // ---------- COVER ----------
+      fill(TEAL); doc.rect(0, 0, W, H, "F");
+      y = 52;
+      doc.setFont("helvetica", "bold"); doc.setFontSize(9); txtColor(GOLD);
+      doc.text(clean(f.clientCompany).toUpperCase(), M, y); y += 34;
+      doc.setFont("helvetica", "bold"); doc.setFontSize(34); txtColor(WHITE);
+      (doc.splitTextToSize("E-Commerce Website Proposal", CW) as string[]).forEach((l) => { doc.text(l, M, y); y += 38; });
+      y += 4;
+      doc.setFont("helvetica", "normal"); doc.setFontSize(12); txtColor(WHITE);
+      (doc.splitTextToSize("A premium, conversion-focused online store for a modern denim brand.", CW) as string[]).forEach((l) => { doc.text(l, M, y); y += 17; });
+      y += 10; fill(GOLD); doc.rect(M, y, 56, 3, "F"); y += 26;
+      // tags
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8); txtColor(WHITE);
+      let tx = M;
+      ["Design", "Development", "E-commerce", "Admin Dashboard", "Deployment"].forEach((tag) => {
+        const tw = doc.getTextWidth(tag) + 18;
+        if (tx + tw > W - M) { tx = M; y += 26; }
+        stroke(WHITE); doc.setLineWidth(0.6); doc.roundedRect(tx, y - 11, tw, 20, 10, 10, "S");
+        doc.text(tag, tx + 9, y + 3); tx += tw + 8;
+      });
+      // cover info table at bottom
+      const infoY = H - 150;
+      stroke(GOLD); doc.setLineWidth(0.6); doc.line(M, infoY - 14, W - M, infoY - 14);
+      const cols = [
+        ["PREPARED FOR", clean(f.clientCompany)],
+        ["PREPARED BY", clean(f.freelancer)],
+        ["DELIVERY TARGET", `Approx. ${clean(f.timeline)}`],
+        ["CONTACT", clean(f.freelancerPhone)],
+      ];
+      const colW = CW / 4;
+      cols.forEach((c, i) => {
+        const x = M + i * colW;
+        doc.setFont("helvetica", "bold"); doc.setFontSize(8); txtColor(GOLD); doc.text(c[0], x, infoY);
+        doc.setFont("helvetica", "bold"); doc.setFontSize(10); txtColor(WHITE);
+        (doc.splitTextToSize(c[1], colW - 10) as string[]).forEach((l, li) => doc.text(l, x, infoY + 16 + li * 14));
+      });
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8); txtColor(WHITE);
+      doc.text("CONFIDENTIAL  -  CLIENT PROPOSAL", M, H - 52);
+      fill(GOLD); doc.rect(0, H - 8, W, 8, "F");
+      // ---------- 01 PROJECT OVERVIEW ----------
+      newPage();
+      section("01", "Project Overview");
+      para(f.summary, 11, false, CHAR); gap(8);
+      para("What the Client Will Receive", 12, true, TEAL); gap(4);
+      lines(f.scope).forEach((s) => bullet(s));
+      gap(6);
+      para("Dedicated Management Dashboard - a key part of the solution, a clean, easy-to-use admin dashboard. Staff will be able to manage products, categories, variations, inventory, orders, customers, coupons, shipping and agreed store settings without depending on the developer for routine operations.", 10.5, false, CHAR);
+      gap(10);
+      para("Dashboard Capabilities", 12, true, TEAL); gap(6);
+      const caps: [string, string][] = [
+        ["Products", "Add, edit, organize and publish products."],
+        ["Inventory", "Track stock and variation-level availability."],
+        ["Orders", "Review orders and update order status."],
+        ["Customers", "Customer profiles and purchase history."],
+        ["Promotions", "Coupons and discount rules."],
+        ["Settings & Reports", "Shipping, store settings and basic overview."],
+      ];
+      const cardW = (CW - 16) / 3; const cardH = 72;
+      for (let r = 0; r < 2; r++) {
+        ensure(cardH + 8);
+        for (let c = 0; c < 3; c++) {
+          const cap = caps[r * 3 + c]; const x = M + c * (cardW + 8);
+          fill(CREAM); doc.roundedRect(x, y, cardW, cardH, 6, 6, "F");
+          stroke(LINE); doc.setLineWidth(0.5); doc.roundedRect(x, y, cardW, cardH, 6, 6, "S");
+          doc.setFont("helvetica", "bold"); doc.setFontSize(10); txtColor(TEAL); doc.text(cap[0], x + 10, y + 20);
+          doc.setFont("helvetica", "normal"); doc.setFontSize(9); txtColor(CHAR);
+          (doc.splitTextToSize(cap[1], cardW - 20) as string[]).forEach((l, li) => doc.text(l, x + 10, y + 36 + li * 12));
+        }
+        y += cardH + 8;
+      }
+      // ---------- 02 PRICING ----------
+      newPage();
+      section("02", "Pricing & Technology");
+      para("All three paths are capped at the same development fee. Fees are development only. Domains, hosting, premium plugins, gateways, SMS and courier APIs are separate unless bundled.", 10.5, false, CHAR); gap(10);
+      const priceCardW = (CW - 16) / 3; const priceCardH = 196;
+      ensure(priceCardH + 8);
+      (["A", "B", "C"] as const).forEach((k, i) => {
+        const x = M + i * (priceCardW + 8);
+        const selected = f.approach === k;
+        fill(CREAM); doc.roundedRect(x, y, priceCardW, priceCardH, 6, 6, "F");
+        stroke(selected ? GOLD : LINE); doc.setLineWidth(selected ? 1.5 : 0.5); doc.roundedRect(x, y, priceCardW, priceCardH, 6, 6, "S");
+        let cy = y + 20;
+        doc.setFont("helvetica", "bold"); doc.setFontSize(8); txtColor(MUTED); doc.text(`PATH ${i + 1}`, x + 10, cy); cy += 16;
+        doc.setFont("helvetica", "bold"); doc.setFontSize(10); txtColor(TEAL);
+        (doc.splitTextToSize(APPROACH[k].label, priceCardW - 20) as string[]).forEach((l) => { doc.text(l, x + 10, cy); cy += 13; });
+        cy += 4; doc.setFont("helvetica", "bold"); doc.setFontSize(17); txtColor(TEAL); doc.text(moneyPdf(45000), x + 10, cy); cy += 16;
+        doc.setFont("helvetica", "normal"); doc.setFontSize(8); txtColor(MUTED);
+        (doc.splitTextToSize(clean(APPROACH[k].platform), priceCardW - 20) as string[]).forEach((l) => { doc.text(l, x + 10, cy); cy += 11; });
+        cy += 6; doc.setFont("helvetica", "normal"); doc.setFontSize(9); txtColor(CHAR);
+        (doc.splitTextToSize(clean(APPROACH[k].blurb), priceCardW - 20) as string[]).forEach((l) => { doc.text(l, x + 10, cy); cy += 12; });
+      });
+      y += priceCardH + 14;
+      para(`Selected path: ${APPROACH[f.approach] ? APPROACH[f.approach].label : "Custom"}  -  Fee: ${moneyPdf(price)}  -  Delivery target: ${clean(f.timeline)}`, 10.5, true, TEAL);
+      gap(10);
+      // ---------- 03 COMPARISON ----------
+      section("03", "Platform Comparison");
+      drawTable(
+        ["Area", "WordPress", "Laravel + React", "Next.js / NestJS"],
+        [
+          ["Development fee", moneyPdf(45000), moneyPdf(45000), `${moneyPdf(45000)} flat`],
+          ["Development speed", "Faster", "Moderate", "Moderate"],
+          ["Customization", "Plugin / theme based", "Very high", "Very high, in code"],
+          ["Plugin dependency", "Higher", "Lower", "Lowest"],
+          ["Infrastructure", "cPanel / shared", "VPS / cloud", "Vercel or VPS"],
+          ["Interaction speed", "Theme bound", "React can feel quick", "Fastest potential"],
+        ],
+        [110, 130, 135, 136]
+      );
+      para("Choose WordPress when you want the fastest, most familiar launch. Choose Laravel when you want deeper customization and business logic. Choose Next.js / NestJS when you want the fastest-feeling storefront and a platform built for future integrations.", 10.5, false, CHAR);
+      // ---------- 04 TIMELINE ----------
+      newPage();
+      section("04", "Timeline & Terms");
+      lines(f.milestones).forEach((ms) => {
+        const parts = ms.split(/:\s(.+)/); const week = parts[0] || ms; const desc = parts[1] || "";
+        ensure(28);
+        fill(TEAL); doc.roundedRect(M, y - 11, 78, 20, 4, 4, "F");
+        doc.setFont("helvetica", "bold"); doc.setFontSize(9); txtColor(WHITE); doc.text(clean(week), M + 8, y + 3);
+        doc.setFont("helvetica", "normal"); doc.setFontSize(10.5); txtColor(CHAR);
+        (doc.splitTextToSize(clean(desc || ms), CW - 92) as string[]).forEach((l) => { doc.text(l, M + 92, y); y += 15; });
+        y += 6;
+      });
+      gap(4);
+      para("Hosting: WordPress on cPanel or shared hosting. Laravel on VPS or cloud. Next.js / NestJS on Vercel or VPS. Hosting, domain and third-party charges are the client's responsibility unless bundled in writing.", 10.5, false, CHAR);
+      gap(8);
+      para("Payment Schedule", 12, true, TEAL); gap(4);
+      const payRowsPdf = lines(f.paymentLines).map((l) => {
+        const m = l.match(/^(\d+(?:\.\d+)?)\s*%?\s*(.*)$/); const pct = m ? Number(m[1]) : 0; const what = m ? m[2] : l;
+        return [what, `${pct}%`, moneyPdf(price * pct / 100)];
+      });
+      drawTable(["Milestone", "Share", "Amount"], payRowsPdf, [CW - 170, 70, 100]);
+      para(`Total project fee: ${moneyPdf(price)}  -  Deposit to start: ${f.deposit}%  -  Valid for: ${f.validity} days`, 10.5, true, TEAL);
+      // ---------- 05 SCOPE / APPROVAL ----------
+      newPage();
+      section("05", "Scope, Support & Approval");
+      para("Deliverables", 12, true, TEAL); gap(4);
+      lines(f.deliverables).forEach((d) => bullet(d));
+      gap(4);
+      para("Scope & Change Requests", 12, true, TEAL); gap(4);
+      para("Scope is fixed at sign-off. Major changes after sign-off cost extra and shift the timeline. Third-party charges (domain renewal, hosting, gateway fees, SMS, courier API, transactional email) are separate.", 10.5, false, CHAR); gap(4);
+      lines(f.notes).forEach((n) => bullet(n));
+      gap(8);
+      para("Client Handover", 12, true, TEAL); gap(4);
+      para("Deployment, configuration, testing and official handover, with configured site, admin access and operational guidance.", 10.5, false, CHAR);
+      gap(10);
+      para("Client Approval", 12, true, TEAL); gap(6);
+      (["A", "B", "C"] as const).forEach((k) => {
+        ensure(20);
+        stroke(TEAL); doc.setLineWidth(0.8); doc.rect(M, y - 11, 11, 11);
+        if (f.approach === k) { doc.setFont("helvetica", "bold"); doc.setFontSize(11); txtColor(TEAL); doc.text("x", M + 3, y - 2); }
+        doc.setFont("helvetica", "normal"); doc.setFontSize(10.5); txtColor(CHAR); doc.text(clean(APPROACH[k].label), M + 18, y); y += 20;
+      });
+      gap(12);
+      const sig = (label: string) => {
+        ensure(36);
+        doc.setFont("helvetica", "normal"); doc.setFontSize(10); txtColor(MUTED); doc.text(label, M, y);
+        stroke(CHAR); doc.setLineWidth(0.6); doc.line(M + 130, y, W - M, y); y += 26;
+      };
+      sig("Authorized Person"); sig("Date"); sig("Signature");
+      gap(8);
+      para(`Prepared by - ${clean(f.freelancer)}  ${clean(f.freelancerPhone)}`, 10.5, true, TEAL);
+      gap(6);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(12); txtColor(TEAL);
+      doc.text(`Thank you for considering this proposal for ${clean(f.clientCompany)}.`, M, y);
+      // footers on body pages
+      const total = doc.getNumberOfPages();
+      for (let i = 2; i <= total; i++) {
+        doc.setPage(i);
+        stroke(LINE); doc.setLineWidth(0.5); doc.line(M, H - 36, W - M, H - 36);
+        doc.setFont("helvetica", "normal"); doc.setFontSize(8); txtColor(MUTED);
+        doc.text(`${clean(f.clientCompany).toUpperCase()}  -  E-COMMERCE WEBSITE PROPOSAL`, M, H - 24);
+        doc.text(`PAGE ${i} OF ${total}`, W - M - 70, H - 24);
+      }
       doc.save(`${slugify(f.clientCompany)}-proposal.pdf`);
     } catch {
       setNotice("PDF download was blocked here. Try opening this page in a normal browser tab, not a chat preview, then Download PDF again.");
