@@ -1,6 +1,5 @@
-import { NextResponse } from "next/server";
-import { db } from "@/db";
-import { inquiries } from "@/db/schema";
+﻿import { NextResponse } from "next/server";
+import { appendInquiry } from "@/lib/inquiries-json";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +20,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, error: "invalid" }, { status: 400 });
     }
 
-    await db.insert(inquiries).values({
+    await appendInquiry({
       name,
       email,
       phone: phone || null,

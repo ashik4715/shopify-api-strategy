@@ -16,7 +16,7 @@ export default function Recommendation() {
               + admin dashboard:</strong> ৳65,000 build, 5–6 weeks, ≈৳4,800/month to run, 90+
               Lighthouse, one panel for orders/content, nothing to patch. Year-1 total ≈৳122,000 —
               <em className="not-italic font-semibold text-white"> ৳41,000 cheaper than Option A</em>,
-              and it's built in the strongest delivery stack.
+              and it&apos;s built in the strongest delivery stack.
             </p>
             <p className="text-lg leading-relaxed">
               <strong className="font-semibold text-white">Option A — WordPress + Shopify plugin:</strong>{" "}

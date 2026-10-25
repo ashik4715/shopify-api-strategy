@@ -62,11 +62,11 @@ export default function TechComparison() {
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           <div className="rounded-2xl border border-line bg-surface p-6 opacity-95">
-            <h3 className="font-display text-lg font-bold text-ink-soft">Option A — why it's discouraged</h3>
+            <h3 className="font-display text-lg font-bold text-ink-soft">Option A — why it&apos;s discouraged</h3>
             <p className="mt-2 text-sm leading-relaxed text-ink-soft">
               Two bills and two update cycles forever, a 75–85 Lighthouse speed ceiling, buy-buttons
               that are never 100% native, and WordPress security as your permanent responsibility (or a
-              retainer you keep paying). It's the right answer only for a client who insists on editing
+              retainer you keep paying). It&apos;s the right answer only for a client who insists on editing
               every page themselves and accepts the patching burden in writing.
             </p>
           </div>
@@ -75,7 +75,7 @@ export default function TechComparison() {
             <p className="mt-2 text-sm leading-relaxed text-ink-soft">
               One codebase you fully control, zero Liquid and zero WordPress patching, 90+ Lighthouse,
               an admin dashboard so your team never touches code — and the lowest year-1 total of the
-              two. It's built in React/Next, the strongest delivery stack, so delivery risk is Low–Medium
+              two. It&apos;s built in React/Next, the strongest delivery stack, so delivery risk is Low–Medium
               instead of plugin roulette.
             </p>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 const links = [
   { href: "/proposals", label: "Downloads" },
@@ -29,14 +30,14 @@ export default function Navbar() {
       }`}
     >
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
-        <a href="/" className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-moss font-display text-base font-bold text-white">
             S
           </span>
           <span className="font-display text-lg font-semibold tracking-tight">
             ShopCraft<span className="text-moss">.</span>
           </span>
-        </a>
+        </Link>
 
         <div className="hidden items-center gap-1 md:flex">
           {links.map((l) => (
